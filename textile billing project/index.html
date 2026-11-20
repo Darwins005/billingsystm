@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1e40af">
+<title>Textile Billing</title>
+<style>
+:root{--pri:#1e40af;--bg:#f3f5f9;--card:#fff;--bd:#dde2ea;--tx:#1b2433;--mut:#6b7686;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
+[hidden]{display:none!important}
+h2{margin:0 0 4px;font-size:22px}h3{margin:0 0 10px;font-size:16px}
+small,.mut{color:var(--mut);font-weight:400}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:0 0 3px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:#fff;color:var(--tx)}
+input:focus,select:focus,textarea:focus{outline:2px solid #93b4ff;border-color:#6d94f5}
+textarea{resize:vertical}
+input[type=checkbox]{width:auto}
+.btn{border:1px solid var(--bd);background:#fff;padding:9px 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:var(--tx);white-space:nowrap}
+.btn:hover{background:#f1f4fa}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{filter:brightness(1.1)}
+.btn.bad{color:var(--bad)}
+.btn.sm{padding:5px 9px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>select,.row>input{flex:1;min-width:0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form .span2{grid-column:1/-1}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.stat b{display:block;font-size:22px;margin-top:4px}
+.stat span{font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.note{font-size:13px;color:var(--mut);margin-top:6px;white-space:pre-line}
+.head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+/* layout */
+#app{display:flex;min-height:100vh}
+nav{width:210px;background:#0f1b3d;color:#fff;padding:14px 10px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+nav .brand{font-weight:700;padding:6px 10px 14px;font-size:16px}
+nav a{padding:10px 12px;border-radius:8px;color:#cbd5f0;cursor:pointer;text-decoration:none;display:flex;gap:10px;align-items:center;white-space:nowrap}
+nav a:hover{background:#1c2c5c}nav a.on{background:var(--pri);color:#fff}
+nav .badge{background:#f59e0b;color:#111;border-radius:10px;padding:0 7px;font-size:12px;font-weight:700;margin-left:auto}
+nav .sync{margin-top:auto;font-size:12px;color:#94a3d0;padding:8px 10px}
+main{flex:1;padding:20px;min-width:0;max-width:1200px}
+@media(max-width:860px){
+ #app{flex-direction:column}
+ nav{width:100%;height:auto;position:sticky;top:0;z-index:20;flex-direction:row;overflow-x:auto;padding:6px;gap:4px}
+ nav .brand,nav .sync{display:none}
+ nav a{padding:8px 11px;font-size:14px}
+ main{padding:12px}
+ .grid2,.form,.grid3{grid-template-columns:1fr}
+}
+/* tables */
+.scroll{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;background:#fff}
+table.t th{background:#eef1f7;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--mut);padding:9px 10px;white-space:nowrap}
+table.t td{padding:9px 10px;border-top:1px solid var(--bd);vertical-align:middle}
+table.t td.r,table.t th.r{text-align:right}
+table.t tfoot td{font-weight:700;background:#f8fafc}
+.pill{padding:2px 9px;border-radius:12px;font-size:12px;font-weight:700;display:inline-block}
+.pill.Paid{background:#dcfce7;color:var(--ok)}.pill.Unpaid{background:#fee2e2;color:var(--bad)}.pill.Partial{background:#fef3c7;color:var(--warn)}
+.pill.q{background:#e0e7ff;color:#3730a3}.pill.invb{background:#dbeafe;color:#1e40af}.pill.dcb{background:#ede9fe;color:#6d28d9}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:20px;border:1px solid var(--bd);background:#fff;cursor:pointer;font-weight:600;font-size:14px;color:var(--mut)}.tab.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.dcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:start}.dcb2 .dch{display:flex;gap:6px;align-items:flex-end;margin-bottom:8px}.dcb2 .dch>div{flex:1}.dcb2 .dch input{margin:0}.dcb2 .rmc{border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px}.dcb2 table.t td{padding:3px 6px}.mt{padding:5px 7px!important;text-align:right}
+.acts{display:flex;gap:4px;flex-wrap:wrap}
+/* invoice editor */
+.lrow{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;align-items:end;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--bd)}
+.lrow>:nth-child(1){grid-column:span 2}.lrow>:nth-child(2){grid-column:span 3}.lrow>:nth-child(3){grid-column:span 4}.lrow>:nth-child(4){grid-column:span 3}.lrow>:nth-child(5){grid-column:span 2}.lrow>:nth-child(6){grid-column:span 3}.lrow>:nth-child(7){grid-column:span 2}.lrow>:nth-child(8){grid-column:span 2}.lrow>:nth-child(9){grid-column:span 2}.lrow>:nth-child(10){grid-column:span 1}
+.grid3{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+@media(max-width:1150px){.card.grid2{grid-template-columns:1fr}}
+.lrow .amt{padding:9px 4px;font-weight:700;text-align:right}
+.x{border:0;background:#fee2e2;color:var(--bad);border-radius:8px;height:38px;cursor:pointer;font-weight:700}
+.erow{display:grid;grid-template-columns:2fr 1fr 34px;gap:8px;margin-bottom:8px}
+@media(max-width:860px){
+ .lrow{grid-template-columns:1fr 1fr}.lrow>*{grid-column:auto!important}.lrow .svc{grid-column:1/-1!important}.lrow .x{grid-column:1/-1!important}
+}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px dashed #9aa6bd;background:#fff;border-radius:16px;padding:4px 11px;font-size:13px;cursor:pointer}
+.tot{display:grid;grid-template-columns:1fr auto;gap:4px 18px;max-width:420px}
+.tot div:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+.tot .big{font-size:18px;font-weight:700;border-top:2px solid var(--tx);padding-top:6px}
+.good{color:var(--ok);font-weight:700}.badc{color:var(--bad);font-weight:700}
+.actions{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding:14px 0 6px;display:flex;gap:8px;flex-wrap:wrap}
+/* chart */
+.bars{display:flex;gap:10px;align-items:flex-end;height:150px;padding-top:10px}
+.bars div{flex:1;text-align:center;font-size:12px;color:var(--mut);display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.bars i{display:block;background:var(--pri);border-radius:5px 5px 0 0;min-height:2px}
+/* modal / toast */
+.mback{position:fixed;inset:0;background:rgba(10,20,40,.55);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 10px}
+.mbox{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:560px}
+.mbox.wide{max-width:900px;background:#e5e8ee}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:10px;z-index:99;font-size:14px;max-width:90%}
+#gate{position:fixed;inset:0;z-index:200;background:var(--bg,#f3f4f8);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#gate .card{width:100%;max-width:380px;box-shadow:0 10px 30px rgba(15,27,61,.12)}
+#gate h2{margin:0 0 4px;text-align:center}#gate .mut{text-align:center;margin:0 0 16px}
+#gate .chk{display:flex;gap:6px;align-items:center;font-size:13px;margin:8px 0 0;font-weight:400;cursor:pointer}#gate .chk input{width:auto}
+#gate .lnk{display:block;margin:12px auto 0;background:none;border:0;color:var(--pri,#1e40af);font-size:13px;cursor:pointer;text-decoration:underline;padding:2px 6px}
+#gate .rec{margin-top:12px;padding-top:12px;border-top:1px solid var(--bd,#e5e7eb)}
+#logoutBtn{position:fixed;top:8px;right:10px;z-index:60;padding:6px 14px;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+main{padding-top:50px}
+@media(max-width:860px){#logoutBtn{top:6px;right:6px;z-index:30}main{padding-top:12px}nav{padding-right:84px!important}}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+#login .card{width:100%;max-width:380px}
+/* ===== invoice (screen + print) ===== */
+.inv{background:#fff;color:#000;width:100%;max-width:800px;margin:0 auto 16px;padding:10px 12px;border:1.5px solid #000;font-family:Arial,Helvetica,sans-serif;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;flex-direction:column}
+.inv .tl{text-align:center;font-weight:700;font-size:1.5em;letter-spacing:1px;position:relative;margin-bottom:2px}
+.inv .tl span{position:absolute;right:0;top:4px;font-size:.5em;font-weight:400;letter-spacing:0}
+.inv .hd{display:flex;gap:16px;align-items:center;padding:4px 0 8px}
+.inv .hd img{max-height:80px;max-width:170px;object-fit:contain;flex-shrink:0}
+.inv .co{flex:1}
+.inv .co h1{margin:0 0 2px;font-size:1.45em;letter-spacing:.3px}
+.inv table{width:100%;border-collapse:collapse;table-layout:fixed}
+.inv th,.inv td{border:1px solid #000;padding:3px 6px;vertical-align:middle;word-wrap:break-word}
+.inv th{background:#d9d9d9;color:#000;font-size:.92em;text-align:center}
+.inv td.r{text-align:right}.inv td.c{text-align:center}
+.inv .meta td{width:25%;font-weight:700}
+.inv .cd{margin:8px 0 6px}
+.inv .cd>b{font-size:1.1em;display:block;margin-bottom:3px}
+.inv .cd table{border:0}.inv .cd td{border:0;padding:1px 6px 1px 0;vertical-align:top}
+.inv .cd td:first-child{width:105px;white-space:nowrap}
+.inv .items th{padding:5px 3px}
+.inv .items td{padding:5px 4px}
+.inv .items tbody td{border-top:0;border-bottom:0}
+.inv .items tbody tr:last-child td{border-bottom:1px solid #000}
+.inv .items tr.fl td{height:2.1em}
+.inv .sumrow{display:flex;gap:0;align-items:stretch}
+.inv .sumrow .gl{flex:1;padding-top:8px;align-self:flex-end}
+.inv .sumrow .gr{width:36%}
+.inv .gr td{font-weight:700}
+.inv .gr td:first-child{text-align:right;width:55%}
+.inv .gr tr.gtot td{font-size:1.1em;background:#eee}
+.inv .words{border:1px solid #000;border-top:0;padding:5px 7px;font-weight:700;margin-bottom:8px}
+.inv .bk{width:62%;margin-bottom:8px}
+.inv .bk th{text-align:left;background:#d9d9d9;width:20%}
+.inv .bot{margin-top:auto}
+.inv .ft{display:flex;gap:10px;justify-content:space-between;min-height:95px}
+.inv .ft .terms{flex:1;font-size:.95em;white-space:pre-line}
+.inv .ft .sig{text-align:right;display:flex;flex-direction:column;justify-content:space-between;min-width:38%}
+.inv .ck{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:26px;align-items:end}
+.inv .ck div{text-align:center;line-height:1.8}
+.inv.dc .hd{display:block;position:relative;text-align:center;padding:4px 0 8px}
+.inv.dc .hd img{position:absolute;left:0;top:50%;transform:translateY(-50%);max-height:70px;max-width:120px}
+.inv.dc .co{text-align:center;width:100%}
+.inv.dc .co div{text-align:center}
+.inv .dco h1{font-size:1.6em;font-weight:700;letter-spacing:.3px;margin:0 0 3px;font-family:inherit}
+.inv .dm td{font-weight:700;width:auto}
+.inv .dbody{display:flex;gap:8px;margin:8px 0 6px;align-items:flex-start}
+.inv .dbody .dr{width:34%}.inv .dr .big{font-size:1.4em;font-weight:700;height:2em}
+.inv .spec td{width:25%}
+.inv .dcw{display:flex;gap:6px;justify-content:center;align-items:flex-start;margin-top:6px}.inv .dcw .dcg{flex:1 1 0;max-width:50%;margin-top:0}.inv .dcg col.cs{width:30%}.inv .dcg col.cm{width:70%}.inv .dcg{margin-top:6px}.inv .dcg th{padding:3px}.inv .dcg td{padding:1px 4px;height:1.9em}.inv .dcg tfoot td.c{white-space:nowrap}
+.inv .dcg tbody td{height:1.9em}.inv .dcg tfoot td{font-weight:700;background:#eee}
+.inv .dn{font-size:.9em;margin:6px 0 4px;font-weight:700}
+.inv .dfl{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;align-self:flex-end}
+.inv .dfl div{border-bottom:1px solid #000;min-height:1.9em}
+#printArea{display:none}
+@media print{
+ body{background:#fff}
+ body>*:not(#printArea){display:none!important}
+ #printArea{display:block}
+ .inv{max-width:none;margin:0;padding:6px 8px;min-height:var(--ph,0);page-break-after:always;break-after:page;page-break-inside:avoid}
+ .inv:last-child{page-break-after:auto;break-after:auto}
+}
+</style>
+<style id="pageStyle"></style>
+</head>
+<body>
+
+<div id="gate" hidden>
+ <form class="card" id="gateForm" autocomplete="on" onsubmit="return A.gateLogin(event)">
+  <h2>🧵 Textile Billing</h2>
+  <p class="mut">Please sign in to continue.</p>
+  <label for="g_user">Username</label><input id="g_user" name="username" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+  <div style="height:10px"></div>
+  <label for="g_pass">Password</label><input id="g_pass" name="password" type="password" autocomplete="current-password" required>
+  <label class="chk"><input type="checkbox" onchange="$('#g_pass').type=this.checked?'text':'password'"> Show password</label>
+  <p id="gateErr" style="color:var(--bad);font-size:13px;min-height:18px;margin:8px 0"></p>
+  <button class="btn pri" type="submit" style="width:100%">Login</button>
+  <button type="button" class="lnk" id="recLink" onclick="A.recToggle(true)">Reset Password</button>
+  <div class="rec" id="recBox" hidden>
+   <label for="g_pin">Master Recovery PIN</label>
+   <input id="g_pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter PIN" onkeydown="if(event.key==='Enter'){event.preventDefault();A.recReset()}">
+   <p id="recErr" style="color:var(--bad);font-size:13px;min-height:18px;margin:8px 0 0"></p>
+   <div class="row" style="margin-top:8px"><button type="button" class="btn pri" onclick="A.recReset()">Reset to Default</button><button type="button" class="btn" onclick="A.recToggle(false)">Cancel</button></div>
+  </div>
+ </form>
+</div>
+<button id="logoutBtn" class="btn" onclick="A.logout()" hidden>⏻ Logout</button>
+
+<div id="login" hidden>
+ <div class="card">
+  <h2>🧵 Textile Billing</h2>
+  <p class="mut">Sign in to access your data.</p>
+  <label>Email</label><input id="l_email" type="email" autocomplete="username">
+  <div style="height:10px"></div>
+  <label>Password</label><input id="l_pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')A.login()">
+  <p id="loginErr" style="color:var(--bad);font-size:13px"></p>
+  <button class="btn pri" style="width:100%" onclick="A.login()">Sign in</button>
+ </div>
+</div>
+
+<div id="app" hidden>
+ <nav id="nav"></nav>
+ <main id="view"></main>
+</div>
+<div id="printArea"></div>
+<div id="modal"></div>
+<div id="toast" hidden></div>
+<datalist id="gstList"></datalist>
+<datalist id="termList"><option>Credit</option><option>Cash</option><option>Advance</option></datalist>
+<datalist id="unitList"><option>Kg</option><option>Meter</option><option>Yard</option><option>Piece</option><option>Dozen</option><option>Roll</option></datalist>
+
+<script>
+/* ============================================================
+   OPTIONAL: paste your Firebase web config here ONCE before
+   uploading to hosting, so every device syncs automatically.
+   Leave as null to use local (single device) mode or to paste
+   the config later from Settings > Cloud sync.
+   ============================================================ */
+const FIREBASE_CONFIG = null;
+/* e.g. {apiKey:"...",authDomain:"...",projectId:"...",appId:"..."} */
+
+/* ---------------- helpers ---------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2=n=>Math.round(((+n||0)+Number.EPSILON)*100)/100;
+const num=n=>(+n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=n=>'₹'+num(n);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const pad2=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())};
+const monthStart=()=>today().slice(0,8)+'01';
+const dmy=s=>{if(!s)return'';const[a,b,c]=s.split('-');return c+'/'+b+'/'+a};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const bySeqAsc=(a,b)=>(a.created||a.seq||0)-(b.created||b.seq||0);
+const bySeqDesc=(a,b)=>(b.created||b.seq||0)-(a.created||a.seq||0);
+const allDocs=()=>[...S.invoices,...S.challans];
+const getDoc=id=>allDocs().find(x=>x.id===id);
+const colOf=d=>d.type==='dc'?'challans':'invoices';
+const GSTRE=/^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/;
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3000)}
+function modal(h,wide){$('#modal').innerHTML=`<div class="mback" onclick="if(event.target===this)closeModal()"><div class="mbox ${wide?'wide':''}">${h}</div></div>`}
+function closeModal(){$('#modal').innerHTML=''}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const csvCell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+
+const STATES=[['01','Jammu & Kashmir'],['02','Himachal Pradesh'],['03','Punjab'],['04','Chandigarh'],['05','Uttarakhand'],['06','Haryana'],['07','Delhi'],['08','Rajasthan'],['09','Uttar Pradesh'],['10','Bihar'],['11','Sikkim'],['12','Arunachal Pradesh'],['13','Nagaland'],['14','Manipur'],['15','Mizoram'],['16','Tripura'],['17','Meghalaya'],['18','Assam'],['19','West Bengal'],['20','Jharkhand'],['21','Odisha'],['22','Chhattisgarh'],['23','Madhya Pradesh'],['24','Gujarat'],['26','Dadra & Nagar Haveli and Daman & Diu'],['27','Maharashtra'],['29','Karnataka'],['30','Goa'],['31','Lakshadweep'],['32','Kerala'],['33','Tamil Nadu'],['34','Puducherry'],['35','Andaman & Nicobar'],['36','Telangana'],['37','Andhra Pradesh'],['38','Ladakh']];
+const stateName=c=>(STATES.find(s=>s[0]===c)||[c,c||''])[1];
+
+function words(total){
+ const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+ const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+ const two=x=>x<20?a[x]:b[Math.floor(x/10)]+(x%10?' '+a[x%10]:'');
+ const three=x=>(x>99?a[Math.floor(x/100)]+' Hundred'+(x%100?' ':''):'')+(x%100?two(x%100):'');
+ const conv=n=>{if(n===0)return'Zero';let s='';const cr=Math.floor(n/1e7);n%=1e7;const lk=Math.floor(n/1e5);n%=1e5;const th=Math.floor(n/1e3);n%=1e3;
+  if(cr)s+=three(cr)+' Crore ';if(lk)s+=two(lk)+' Lakh ';if(th)s+=two(th)+' Thousand ';if(n)s+=three(n);return s.trim()};
+ const rup=Math.floor(total+1e-9),ps=Math.round((total-rup)*100);
+ return 'Rupees '+conv(rup)+(ps?' and '+two(ps)+' Paise':'')+' Only';
+}
+
+/* ---------------- defaults / state ---------------- */
+const DEF_COMPANY={name:'SRI THINDAL MURUGAN WASHING',tagline:'',address:'Address line 1\nCity, State - PIN',phone:'',email:'',gstin:'',pan:'',stateCode:'33',logo:'',
+ bankBranch:'',bankAcc:'',bankIfsc:'',web:'',dcName:'Sri Thindal Murugan Washing',dcSub:'Raising',dcGstin:'33BXFPS1682H1ZB',dcOffice:'215/3, Vilarasampatti Nall Road, Vilarasampatti (Po), Erode - 638 107',dcBOffice:'S.F.No. 213/5, Ganagapuram, Chithode, Erode - 638 102',dcCell:'98430 64657, 98431 83934',dcPrefix:'',dcHsn:'998821',dcNote1:'Not for sale. Job Work Only.',dcNote2:'Complaints if any should be registered with us within 48 hrs.',terms:'1. Goods once processed will not be taken back.\n2. Interest @18% p.a. on overdue payments.\n3. Subject to local jurisdiction only.',
+ footer:'Thank you for your business!',sigLabel:'Authorized Signatory',invTitle:'INVOICE',prefix:'INV-',pad:4,accent:'#1e40af',paper:'A4',
+ showLogo:true,showBank:true,showTerms:true,headAlign:'left',fontSize:12,roundOff:true,defaultGst:5,gstRates:'0,5,12,18',copies:'1',
+ expensePresets:'Dyes & Chemicals,Labour,Electricity / Fuel,Transport,Other'};
+/* Sample rates only - edit them in the Services page */
+const DEF_SERVICES=[['Dyeing','Kg',45],['Bleaching','Kg',25],['Washing','Kg',15],['Mercerising','Kg',20],['Softener Finish','Kg',10],['Compacting','Kg',8],['Calendering','Meter',3],['Stentering / Heat Setting','Meter',4],['Singeing','Meter',2]]
+ .map(([name,unit,rate])=>({name,unit,rate,hsn:'998821',gst:5,active:true}));
+
+const S={company:{...DEF_COMPANY},customers:[],services:[],invoices:[],challans:[],meta:{counter:0,dcCounter:0}};
+let VIEW='dashboard',fs=null,auth=null,USER='',E=null,D=null,QT='all',HT='all',afterCust=false,seeded=false;
+const F={from:'',to:'',cust:'',no:'',svc:'',status:''};
+const SEL={q:new Set(),h:new Set()};
+const REP={from:monthStart(),to:today()};
+const A={};const V={};const AFTER={};
+
+/* ---------------- data layer ---------------- */
+function persist(){try{localStorage.setItem('tb_data',JSON.stringify(S))}catch(e){toast('Browser storage is full!')}}
+function seedServices(){DEF_SERVICES.forEach(s=>put('services',{...s}))}
+function put(col,o){
+ if(!o.id)o.id=uid();
+ const a=S[col],i=a.findIndex(x=>x.id===o.id);i<0?a.push(o):a[i]=o;
+ if(fs)fs.collection(col).doc(o.id).set(clone(o)).catch(e=>toast('Sync error: '+e.message));else persist();
+ return o;
+}
+function del(col,id){
+ S[col]=S[col].filter(x=>x.id!==id);
+ if(fs)fs.collection(col).doc(id).delete().catch(e=>toast('Sync error: '+e.message));else persist();
+}
+function saveCompany(){if(fs)fs.doc('meta/company').set(clone(S.company)).catch(e=>toast('Sync error: '+e.message));else persist()}
+async function nextSeq(kind){
+ const key=kind==='dc'?'dcCounter':'counter';
+ if(fs){const ref=fs.doc('meta/'+key);return fs.runTransaction(async t=>{const d=await t.get(ref);const n=(d.exists?d.data().n:0)+1;t.set(ref,{n});return n})}
+ const n=(S.meta[key]||0)+1;S.meta[key]=n;persist();return n;
+}
+function setCounter(n,kind){const key=kind==='dc'?'dcCounter':'counter';S.meta[key]=n;if(fs)fs.doc('meta/'+key).set({n});else persist()}
+function fmtNo(kind,n){const c=S.company;return kind==='dc'?(c.dcPrefix||'')+n:(c.prefix||'')+String(n).padStart(+c.pad||1,'0')}
+function bumpCounter(kind,no){const c=S.company,pre=kind==='dc'?(c.dcPrefix||''):(c.prefix||'');if(!no.startsWith(pre))return;const rest=no.slice(pre.length);if(!/^\d+$/.test(rest))return;const n=+rest,cur=S.meta[kind==='dc'?'dcCounter':'counter']||0;if(n>cur)setCounter(n,kind)}
+function okNo(col,no,id){const d=S[col].find(x=>x.no===no&&x.id!==id);return !d||confirm('Number "'+no+'" is already used by another document. Save with the same number anyway?')}
+async function assignNo(doc,kind,col){
+ const typed=(doc.no||'').trim();
+ if(!doc.id){
+  if(!doc.noAuto&&typed){if(!okNo(col,typed,null))return false;doc.no=typed;doc.seq=0;bumpCounter(kind,typed)}
+  else{try{const n=await nextSeq(kind);doc.seq=n;doc.no=fmtNo(kind,n)}catch(e){toast('Could not get a number (check internet): '+e.message);return false}}
+  doc.id=uid();doc.printed=false;doc.created=Date.now();return true;
+ }
+ if(!typed){toast('Please enter a number');return false}
+ const old=S[col].find(x=>x.id===doc.id);
+ if(old&&old.no!==typed&&!okNo(col,typed,doc.id))return false;
+ doc.no=typed;return true;
+}
+
+/* ---------------- calculations ---------------- */
+function stateOf(cu){const g=(cu&&cu.gstin||'').slice(0,2);return /^\d{2}$/.test(g)?g:(cu&&cu.stateCode)||S.company.stateCode}
+function taxType(inv){
+ if(inv.taxMode==='intra'||inv.taxMode==='inter')return inv.taxMode;
+ return stateOf(inv.cust||{})===S.company.stateCode?'intra':'inter';
+}
+function calc(inv){
+ const lines=inv.lines||[];let taxable=0;const g={};
+ lines.forEach(l=>{const a=r2((+l.qty||0)*(+l.rate||0));taxable+=a;const k=+l.gst||0;g[k]=(g[k]||0)+a});
+ taxable=r2(taxable);const tt=taxType(inv);let cgst=0,sgst=0,igst=0;const groups=[];
+ Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(k=>{
+  const t=r2(g[k]*k/100);
+  if(tt==='intra'){const h=r2(t/2);cgst+=h;sgst+=r2(t-h)}else igst+=t;
+  groups.push({rate:k,taxable:r2(g[k]),tax:t});
+ });
+ cgst=r2(cgst);sgst=r2(sgst);igst=r2(igst);
+ const totalTax=r2(cgst+sgst+igst),raw=r2(taxable+totalTax);
+ const total=S.company.roundOff?Math.round(raw):raw;
+ const exp=r2((inv.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0));
+ const profit=r2(taxable-exp);
+ return{taxable,groups,tt,cgst,sgst,igst,totalTax,raw,total,round:r2(total-raw),exp,profit,margin:taxable?profit/taxable*100:0};
+}
+const paidOf=i=>r2((i.payments||[]).reduce((s,p)=>s+(+p.amount||0),0));
+function statusOf(i){const t=calc(i).total,p=paidOf(i);if(t>0&&p>=t-0.005)return'Paid';if(p<=0)return'Unpaid';return'Partial'}
+const balOf=i=>Math.max(0,r2(calc(i).total-paidOf(i)));
+
+/* ---------------- invoice template ---------------- */
+function invoiceHTML(inv,label){
+ const c=S.company,k=calc(inv),cu=inv.cust||{},intra=k.tt==='intra';
+ const sac=inv.sac||(inv.lines[0]&&inv.lines[0].hsn)||'';
+ const ph={A4:'275mm',A5:'190mm',Letter:'260mm'}[c.paper]||'275mm';
+ const rows=inv.lines.map((l,i)=>`<tr><td class="c">${i+1}</td><td class="c">${esc(l.partyDc)}</td><td class="c">${esc(l.dcNo)}</td><td>${esc(l.name)}</td><td class="c">${esc(l.width)}</td><td class="c">${l.pcs===''||l.pcs==null?'':esc(l.pcs)}</td><td class="r">${num(l.qty)}</td><td class="r">${num(l.rate)}</td><td class="r">${num(r2(l.qty*l.rate))}</td></tr>`).join('')
+  +Array(Math.max(0,8-inv.lines.length)).fill('<tr class="fl"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('');
+ const gst=k.groups.map(g=>{const cg=intra?r2(g.tax/2):0,sg=intra?r2(g.tax-cg):0,ig=intra?0:g.tax,hr=+(g.rate/2).toFixed(2);
+  return `<tr><td class="r">${num(g.taxable)}</td><td class="c">GST ${g.rate}%</td><td class="c">${hr}%</td><td class="r">${num(cg)}</td><td class="c">${hr}%</td><td class="r">${num(sg)}</td><td class="c">${g.rate}%</td><td class="r">${num(ig)}</td></tr>`}).join('');
+ const gl=k.groups.length===1?'GST '+k.groups[0].rate+'%':'GST';
+ const hasBank=c.bankBranch||c.bankAcc||c.bankIfsc;
+ return `<div class="inv" style="font-size:${c.paper==='A5'?Math.max(8,(+c.fontSize||12)-3):(+c.fontSize||12)}px;--ph:${ph}">
+ <div class="tl">${esc(c.invTitle||'INVOICE')}${label?`<span>${esc(label)}</span>`:''}</div>
+ <div class="hd">${c.showLogo&&c.logo?`<img src="${c.logo}" alt="">`:''}
+  <div class="co"><h1>${esc(c.name)}</h1>${c.tagline?`<div>${esc(c.tagline)}</div>`:''}<div style="white-space:pre-line">${esc(c.address)}</div>
+  ${c.phone||c.gstin?`<div><b>${[c.phone&&'Ph No : '+esc(c.phone),c.gstin&&'GSTIN : '+esc(c.gstin)].filter(Boolean).join(' | ')}</b></div>`:''}
+  ${c.web||c.email?`<div><b>${[c.web&&'Web: '+esc(c.web),c.email&&'Email : '+esc(c.email)].filter(Boolean).join(' | ')}</b></div>`:''}</div></div>
+ <table class="meta"><tr><td>Bill No. - ${esc(inv.no)}</td><td>Terms - ${esc(inv.terms||'Credit')}</td><td>Date - ${dmy(inv.date)}</td><td>SAC - ${esc(sac)}</td></tr></table>
+ <div class="cd"><b>Customer Details</b><table>
+  <tr><td>Customer Name</td><td>: ${esc(cu.name)}</td></tr>
+  <tr><td>Address</td><td style="white-space:pre-line">: ${esc(cu.address)}${cu.phone?(cu.address?', ':'')+'PH: '+esc(cu.phone):''}</td></tr>
+  <tr><td>GSTIN</td><td>: ${esc(cu.gstin)}</td></tr></table></div>
+ <table class="items"><colgroup><col style="width:5%"><col style="width:8%"><col style="width:13%"><col style="width:29%"><col style="width:7%"><col style="width:6%"><col style="width:11%"><col style="width:8%"><col style="width:13%"></colgroup>
+ <thead><tr><th>S.No.</th><th>Party DC No.</th><th>DC No.</th><th>Particulars</th><th>Width</th><th>Pcs</th><th>Mtrs / Grms</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+ <div class="sumrow"><div class="gl"><table><thead><tr><th>Taxable Value</th><th>GST Type</th><th colspan="2">CGST</th><th colspan="2">SGST</th><th colspan="2">IGST</th></tr></thead><tbody>${gst}</tbody></table></div>
+ <div class="gr"><table><tr><td>Sub Total</td><td class="r">${num(k.taxable)}</td></tr><tr><td>${gl}</td><td class="r">${num(k.totalTax)}</td></tr><tr><td>Round Off</td><td class="r">${num(k.round)}</td></tr><tr class="gtot"><td>Total</td><td class="r">${num(k.total)}</td></tr></table></div></div>
+ <div class="words">Rupees : ${esc(words(k.total).replace(/^Rupees /,''))}</div>
+ <div class="bot">
+ ${c.showBank&&hasBank?`<table class="bk"><tr><th>Branch :</th><td colspan="3">${esc(c.bankBranch)}</td></tr><tr><th>Account No. :</th><td>${esc(c.bankAcc)}</td><th>IFSC Code :</th><td>${esc(c.bankIfsc)}</td></tr></table>`:''}
+ <div class="ft"><div class="terms">${c.showTerms?`<b>Terms and Conditions</b>\n${esc(c.terms)}`:''}</div><div class="sig"><b>For ${esc(c.name)}</b><b>${esc(c.sigLabel)}</b></div></div>
+ <div class="ck"><div style="text-align:left"><b>Received By</b></div><div><b>Checked By</b><br><b>Page 1 of 1</b></div><div></div></div>
+ </div></div>`;
+}
+const docHTML=(d,l)=>d.type==='dc'?dcHTML(d,l):invoiceHTML(d,l);
+function dcTot(d){let pcs=0,mts=0;const cols=(d.cols||[]).map(c=>{let t=0;(c.vals||[]).forEach(v=>{const n=parseFloat(v);if(n>0){pcs++;t+=n}});mts+=t;return r2(t)});return{pcs,mts:r2(mts),cols}}
+const dcTitle=c=>{const n=(c.dcName||'').trim(),sb=(c.dcSub||'').trim();if(!sb||/&/.test(n))return n;const sub=sb.charAt(0).toUpperCase()+sb.slice(1).toLowerCase();return n+' &amp; '+esc(sub)};
+function dcHTML(d,label){
+ const c=S.company,t=dcTot(d),cu=d.cust||{},f2=n=>(+n).toFixed(2);
+ const fsz=c.paper==='A5'?Math.max(8,(+c.fontSize||12)-3):(+c.fontSize||12);
+ const ph={A4:'275mm',A5:'190mm',Letter:'260mm'}[c.paper]||'275mm';
+ /* only designs that actually have meterage; only filled rows */
+ const act=(d.cols||[]).map(c0=>({design:c0.design,vals:(c0.vals||[]).map(v=>parseFloat(v)).filter(n=>n>0)})).filter(c0=>c0.vals.length);
+ const tables=act.map(c0=>`<table class="dcg"><colgroup><col class="cs"><col class="cm"></colgroup>
+  <thead><tr><th colspan="2">Design No. : ${esc(c0.design)}</th></tr><tr><th>S.No</th><th>Mts.</th></tr></thead>
+  <tbody>${c0.vals.map((v,i)=>`<tr><td class="c">${i+1}</td><td class="r">${f2(v)}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td class="c">Total</td><td class="r">${f2(c0.vals.reduce((a,b)=>a+b,0))}</td></tr></tfoot></table>`).join('');
+ return `<div class="inv dc" style="font-size:${fsz}px;--ph:${ph}">
+ <div class="tl">DELIVERY CHALLAN${label?`<span>${esc(label)}</span>`:''}</div>
+ <div class="hd">${c.showLogo&&c.logo?`<img src="${c.logo}" alt="">`:''}<div class="co dco"><h1>${dcTitle(c)}</h1>
+  ${c.dcGstin?`<div><b>GSTIN : ${esc(c.dcGstin)}</b></div>`:''}${c.dcOffice?`<div>Office : ${esc(c.dcOffice)}</div>`:''}${c.dcBOffice?`<div>B. Office : ${esc(c.dcBOffice)}</div>`:''}${c.dcCell?`<div>Cell : ${esc(c.dcCell)}</div>`:''}</div></div>
+ <table class="dm"><tr><td>D.C. No. : ${esc(d.no)}</td><td>Date : ${dmy(d.date)}</td><td>HSN Code : ${esc(d.hsn)}</td></tr></table>
+ <div class="dbody"><div class="cd" style="flex:1;margin:0"><table><tr><td>To M/s.</td><td style="white-space:pre-line">: <b>${esc(cu.name)}</b>${cu.address?'\n'+esc(cu.address):''}</td></tr><tr><td>Party GSTIN</td><td>: ${esc(d.gstin||cu.gstin)}</td></tr><tr><td>Process</td><td>: <b>${esc(d.process)}</b></td></tr><tr><td>Party D.C. No.</td><td>: ${esc(d.partyDc)}</td></tr></table></div>
+ <div class="dr"><table><tr><th>Total Pcs.</th><th>Total Mts.</th></tr><tr><td class="c big">${t.pcs}</td><td class="c big">${f2(t.mts)}</td></tr></table></div></div>
+ <table class="spec"><tr><td>Width : <b>${esc(d.width)}</b></td><td>Folding : <b>${esc(d.folding)}</b></td><td>Shrinkage : <b>${esc(d.shrinkage)}</b></td><td>gms/mtr. : <b>${esc(d.gsm)}</b></td></tr>${d.remarks?`<tr><td colspan="4">Remarks : ${esc(d.remarks)}</td></tr>`:''}</table>
+ <div class="dcw">${tables}</div>
+ <div class="bot"><div class="dn">${esc(c.dcNote1)}${c.dcNote2?'<br>'+esc(c.dcNote2):''}</div>
+ <div class="ft"><div class="dfl"><div>Goods received by : ${esc(d.goodsBy)}</div><div>Our Lot No. : ${esc(d.lotNo)}</div><div>Prepared by : ${esc(d.preparedBy)}</div></div>
+ <div class="sig"><b>For ${dcTitle(c)}</b><b>${esc(c.sigLabel)}</b></div></div></div></div>`;
+}
+function printInvs(list){
+ if(!list.length)return toast('Nothing to print');
+ const c=S.company,labels=c.copies==='3'?['Original for Recipient','Duplicate for Transporter','Triplicate for Supplier']:c.copies==='2'?['Original for Recipient','Duplicate for Supplier']:[''];
+ $('#pageStyle').textContent=`@page{size:${c.paper};margin:8mm}`;
+ $('#printArea').innerHTML=list.map(i=>labels.map(l=>docHTML(i,l)).join('')).join('');
+ setTimeout(()=>{window.print();list.forEach(i=>{if(!i.printed){i.printed=true;put(colOf(i),i)}});SEL.q.clear();SEL.h.clear();render()},200);
+}
+
+/* ---------------- navigation / render ---------------- */
+const NAV=[['dashboard','📊','Dashboard'],['new','➕','Create'],['queue','🗂️','Queue'],['history','🕘','History'],['customers','👥','Customers'],['services','🧵','Services'],['reports','📈','Reports'],['settings','⚙️','Settings'],['master','🔐','Master Settings']];
+function updNav(){
+ const qn=allDocs().filter(i=>!i.printed).length;
+ $('#nav').innerHTML=`<div class="brand">🧵 ${esc(S.company.name).slice(0,22)}</div>`+NAV.map(([v,ic,l])=>`<a class="${v===VIEW||(v==='new'&&VIEW==='newdc')?'on':''}" onclick="${v==='new'?'A.newInv()':`go('${v}')`}">${ic} ${l}${v==='queue'&&qn?`<span class="badge">${qn}</span>`:''}</a>`).join('')
+ +`<div class="sync">${fs?'● Synced · '+esc(USER):'● Local only (this device)'}</div>`;
+}
+function go(v){VIEW=v;window.scrollTo(0,0);render()}
+function render(){
+ $('#gstList').innerHTML=String(S.company.gstRates).split(',').map(x=>`<option value="${esc(x.trim())}">`).join('');
+ $('#view').innerHTML=V[VIEW]();updNav();AFTER[VIEW]&&AFTER[VIEW]();
+}
+function onData(){if(!['new','newdc','settings','master'].includes(VIEW))render();else updNav()}
+
+/* ---------------- DASHBOARD ---------------- */
+V.dashboard=()=>{
+ const t=today(),ym=t.slice(0,7);let day=0,mon=0,pend=0,profit=0,taxable=0,qn=0;const byC={};
+ S.invoices.forEach(i=>{const k=calc(i);if(i.date===t)day+=k.total;if(i.date.slice(0,7)===ym){mon+=k.total;profit+=k.profit;taxable+=k.taxable}
+  const b=balOf(i);if(b>0){pend+=b;const n=i.cust.name;byC[n]=(byC[n]||0)+b}if(!i.printed)qn++});
+ S.challans.forEach(d=>{if(!d.printed)qn++});const months=[];for(let j=5;j>=0;j--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-j);const key=d.getFullYear()+'-'+pad2(d.getMonth()+1);
+  months.push({l:d.toLocaleString('en-IN',{month:'short'}),v:S.invoices.filter(i=>i.date.slice(0,7)===key).reduce((s,i)=>s+calc(i).total,0)})}
+ const mx=Math.max(1,...months.map(m=>m.v));
+ const top=Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,6);
+ const recent=[...S.invoices].sort(bySeqDesc).slice(0,8);
+ return `<div class="head"><h2>Dashboard</h2><button class="btn pri" onclick="A.newInv()">➕ New Invoice</button></div>
+ <div class="stats">
+  <div class="stat"><span>Total invoices</span><b>${S.invoices.length}</b></div>
+  <div class="stat"><span>Today's revenue</span><b>${money(day)}</b></div>
+  <div class="stat"><span>This month</span><b>${money(mon)}</b></div>
+  <div class="stat"><span>Pending payments</span><b style="color:var(--bad)">${money(pend)}</b></div>
+  <div class="stat"><span>Month profit</span><b class="${profit>=0?'good':'badc'}">${money(profit)}</b></div>
+  <div class="stat" onclick="go('queue')" style="cursor:pointer"><span>In print queue</span><b>${qn}</b></div>
+ </div>
+ <div class="grid2"><div class="card"><h3>Revenue – last 6 months</h3><div class="bars">${months.map(m=>`<div title="${money(m.v)}"><small>${m.v?'₹'+Math.round(m.v/1000)+'k':''}</small><i style="height:${m.v/mx*100}px"></i>${m.l}</div>`).join('')}</div></div>
+ <div class="card"><h3>Highest pending</h3>${top.length?`<table class="t"><tbody>${top.map(([n,b])=>`<tr><td>${esc(n)}</td><td class="r badc">${money(b)}</td></tr>`).join('')}</tbody></table>`:'<p class="mut">No pending payments 🎉</p>'}</div></div>
+ <div class="card"><h3>Recent invoices</h3>${recent.length?`<div class="scroll"><table class="t"><thead><tr><th>No</th><th>Date</th><th>Customer</th><th class="r">Total</th><th>Status</th></tr></thead><tbody>${recent.map(i=>`<tr><td>${esc(i.no)}</td><td>${dmy(i.date)}</td><td>${esc(i.cust.name)}</td><td class="r">${money(calc(i).total)}</td><td><span class="pill ${statusOf(i)}">${statusOf(i)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="mut">No invoices yet. Create your first one!</p>'}</div>`;
+};
+
+/* ---------------- INVOICE EDITOR ---------------- */
+const createTabs=a=>`<div class="tabs"><a class="tab ${a==='inv'?'on':''}" onclick="go('new')">Create Invoice</a><a class="tab ${a==='dc'?'on':''}" onclick="go('newdc')">Create Delivery Challan</a></div>`;
+const blankInv=()=>({no:fmtNo('inv',(S.meta.counter||0)+1),noAuto:true,date:today(),customerId:'',taxMode:'auto',terms:'Credit',sac:'',remarks:'',lines:[{}],expenses:[],payments:[],printed:false});
+A.newInv=()=>{E=blankInv();go('new')};
+A.edit=id=>{const d=getDoc(id);if(!d)return;closeModal();if(d.type==='dc'){D=clone(d);D.cols=normCols(D.cols,true);D.noAuto=false;go('newdc');return}E=clone(d);E.noAuto=false;if(!E.lines.length)E.lines=[{}];go('new')};
+const custOptions=sel=>`<option value="">— Select customer —</option>`+[...S.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.name)}</option>`).join('');
+V.new=()=>{
+ if(!E)E=blankInv();
+ return `${createTabs('inv')}<div class="head"><h2>${E.id?'Edit Invoice '+esc(E.no):'New Invoice'}</h2></div>
+ <div class="card grid2">
+  <div><label>Customer</label><div class="row"><select id="e_cust" onchange="A.pickCust(this.value)">${custOptions(E.customerId)}</select><button class="btn" onclick="A.custModal('',true)">+ New</button></div><div id="custCard" class="note"></div></div>
+  <div class="grid3"><div><label>Invoice No. ${E.id?'':'<small>(auto – editable)</small>'} <a style="cursor:pointer;color:var(--pri);font-weight:600" onclick="A.numModal('inv')">⚙ Change default</a></label><input value="${esc(E.no)}" oninput="E.no=this.value;E.noAuto=!this.value.trim()"></div><div><label>Invoice date</label><input type="date" value="${E.date}" onchange="E.date=this.value"></div>
+   <div><label>Tax type</label><select id="e_tax" onchange="E.taxMode=this.value;updTotals()"><option value="auto">Auto (by state)</option><option value="intra">CGST + SGST</option><option value="inter">IGST</option></select></div>
+   <div><label>Terms</label><input value="${esc(E.terms)}" oninput="E.terms=this.value" list="termList"></div>
+   <div><label>SAC code</label><input value="${esc(E.sac)}" oninput="E.sac=this.value" placeholder="auto from service"></div>
+   <div style="grid-column:1/-1"><label>Internal note (not printed)</label><input value="${esc(E.remarks)}" oninput="E.remarks=this.value" placeholder="optional"></div></div>
+ </div>
+ <div class="card"><h3>Services</h3><div id="lines"></div><button class="btn" onclick="A.addLine()">+ Add service</button></div>
+ <div class="card"><h3>Purchase cost &amp; expenses <small>— internal, not printed</small></h3><div class="chips" id="presets"></div><div id="exps"></div></div>
+ <div class="card" id="totals"></div>
+ <div class="actions"><button class="btn pri" onclick="A.save('queue')">💾 Save to Queue</button><button class="btn" onclick="A.save('new')">Save &amp; New</button><button class="btn" onclick="A.save('print')">🖨 Save &amp; Print</button><button class="btn" onclick="E=null;go('queue')">Cancel</button></div>`;
+};
+AFTER.new=()=>{$('#e_tax').value=E.taxMode;renderLines();renderPresets();renderExps();updTotals();A.pickCust(E.customerId)};
+A.pickCust=id=>{E.customerId=id;if($('#e_cust'))$('#e_cust').value=id;const c=S.customers.find(x=>x.id===id);
+ $('#custCard').textContent=c?[c.address,c.phone&&'Ph: '+c.phone,c.gstin?'GSTIN: '+c.gstin:'(No GSTIN)','State: '+stateName(stateOf(c))].filter(Boolean).join('\n'):'';updTotals()};
+function renderLines(){
+ const act=S.services.filter(s=>s.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+ $('#lines').innerHTML=E.lines.map((l,i)=>{
+  const miss=l.serviceId&&!act.some(s=>s.id===l.serviceId)?`<option value="${l.serviceId}" selected>${esc(l.name)}</option>`:'';
+  return `<div class="lrow"><div><label>Party DC No.</label><input value="${esc(l.partyDc)}" oninput="A.lineTxt(${i},'partyDc',this.value)"></div>
+  <div><label>DC No.</label><input value="${esc(l.dcNo)}" placeholder="25-26/6528" oninput="A.lineTxt(${i},'dcNo',this.value)"></div>
+  <div class="svc"><label>Particulars</label><select id="svc${i}" onchange="A.lineSvc(${i},this.value)"><option value="">Select service…</option>${miss}${act.map(s=>`<option value="${s.id}" ${s.id===l.serviceId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+  <div><label>Width</label><input value="${esc(l.width)}" placeholder='58"' oninput="A.lineTxt(${i},'width',this.value)"></div>
+  <div><label>Pcs</label><input type="number" inputmode="numeric" step="any" min="0" value="${l.pcs??''}" oninput="A.lineSet(${i},'pcs',this.value)"></div>
+  <div><label>Mtrs / Grms</label><input id="qty${i}" type="number" inputmode="decimal" step="any" min="0" value="${l.qty??''}" oninput="A.lineSet(${i},'qty',this.value)"></div>
+  <div><label>Rate ₹</label><input type="number" inputmode="decimal" step="any" min="0" value="${l.rate??''}" oninput="A.lineSet(${i},'rate',this.value)"></div>
+  <div><label>GST %</label><input list="gstList" type="number" inputmode="decimal" step="any" min="0" value="${l.gst??''}" oninput="A.lineSet(${i},'gst',this.value)"></div>
+  <div><label>Amount</label><div class="amt" id="amt${i}">${num(r2(l.qty*l.rate))}</div></div>
+  <button class="x" title="Remove" onclick="A.delLine(${i})">✕</button></div>`}).join('');
+}
+A.lineTxt=(i,k,v)=>{E.lines[i][k]=v};
+A.lineSvc=(i,id)=>{const s=S.services.find(x=>x.id===id);if(!s){Object.assign(E.lines[i],{serviceId:'',name:'',rate:'',gst:''})}else Object.assign(E.lines[i],{serviceId:s.id,name:s.name,hsn:s.hsn,unit:s.unit,rate:s.rate,gst:s.gst});
+ renderLines();updTotals();setTimeout(()=>{const q=$('#qty'+i);q&&q.focus()},30)};
+A.lineSet=(i,k,v)=>{E.lines[i][k]=v===''?'':+v;const l=E.lines[i];$('#amt'+i).textContent=num(r2(l.qty*l.rate));updTotals()};
+A.addLine=()=>{E.lines.push({});renderLines();setTimeout(()=>{const s=$('#svc'+(E.lines.length-1));s&&s.focus()},30)};
+A.delLine=i=>{E.lines.splice(i,1);if(!E.lines.length)E.lines.push({});renderLines();updTotals()};
+function renderPresets(){$('#presets').innerHTML=String(S.company.expensePresets).split(',').map(x=>x.trim()).filter(Boolean).map(x=>`<span class="chip" onclick="A.addExp(this.dataset.n)" data-n="${esc(x)}">+ ${esc(x)}</span>`).join('')}
+function renderExps(){$('#exps').innerHTML=E.expenses.length?E.expenses.map((x,i)=>`<div class="erow"><input value="${esc(x.desc)}" placeholder="Expense / purchase item" oninput="E.expenses[${i}].desc=this.value"><input type="number" inputmode="decimal" step="any" min="0" value="${x.amount??''}" placeholder="₹ Amount" oninput="E.expenses[${i}].amount=this.value===''?'':+this.value;updTotals()"><button class="x" onclick="E.expenses.splice(${i},1);renderExps();updTotals()">✕</button></div>`).join(''):'<p class="mut" style="margin:0">No expenses added. Tap a button above to add dyes, labour, etc.</p>'}
+A.addExp=n=>{E.expenses.push({desc:n,amount:''});renderExps();updTotals()};
+function updTotals(){
+ const el=$('#totals');if(!el)return;
+ E.cust=S.customers.find(c=>c.id===E.customerId)||{};const k=calc(E);
+ const taxRows=k.tt==='intra'?`<div>CGST</div><div>${num(k.cgst)}</div><div>SGST</div><div>${num(k.sgst)}</div>`:`<div>IGST</div><div>${num(k.igst)}</div>`;
+ el.innerHTML=`<div class="grid2"><div><h3>Invoice total <small>(${k.tt==='intra'?'CGST + SGST':'IGST'})</small></h3><div class="tot"><div>Taxable amount</div><div>${num(k.taxable)}</div>${taxRows}${k.round?`<div>Round off</div><div>${num(k.round)}</div>`:''}<div class="big">Grand total</div><div class="big">${money(k.total)}</div></div></div>
+ <div><h3>Costing &amp; profit <small>(internal)</small></h3><div class="tot"><div>Service revenue (taxable)</div><div>${num(k.taxable)}</div><div>Total purchase cost / expenses</div><div>${num(k.exp)}</div><div class="big">Profit</div><div class="big ${k.profit>=0?'good':'badc'}">${money(k.profit)} <small>(${k.margin.toFixed(1)}%)</small></div></div></div></div>`;
+}
+A.save=async mode=>{
+ const cu=S.customers.find(c=>c.id===E.customerId);if(!cu)return toast('Please select a customer');
+ const lines=E.lines.filter(l=>l.serviceId).map(l=>({...l,qty:+l.qty||0,rate:+l.rate||0,gst:+l.gst||0}));
+ if(!lines.length)return toast('Select at least one service');
+ if(lines.some(l=>!(l.qty>0)))return toast('Enter Mtrs / Grms for every row');
+ E.lines=lines;E.expenses=E.expenses.filter(x=>x.desc||+x.amount).map(x=>({desc:x.desc||'Other',amount:+x.amount||0}));
+ E.cust={name:cu.name,address:cu.address||'',phone:cu.phone||'',gstin:cu.gstin||'',email:cu.email||'',stateCode:stateOf(cu)};
+ if(!(await assignNo(E,'inv','invoices')))return;
+ E.updated=Date.now();const inv=put('invoices',E);E=null;
+ if(mode==='print'){printInvs([inv]);go('history')}else if(mode==='new'){toast('Saved '+inv.no+' to queue');A.newInv()}else{toast('Saved '+inv.no);go('queue')}
+};
+
+/* ---------------- DELIVERY CHALLAN FORM ---------------- */
+const dcBlank=()=>({type:'dc',no:fmtNo('dc',(S.meta.dcCounter||0)+1),noAuto:true,date:today(),customerId:'',address:'',gstin:'',process:'',hsn:S.company.dcHsn||'998821',width:'',folding:'',shrinkage:'',gsm:'',remarks:'',cols:[{design:'',vals:['']}],goodsBy:'',partyDc:'',lotNo:'',preparedBy:'',printed:false});
+A.numModal=kind=>{const c=S.company,dc=kind==='dc',next=((dc?S.meta.dcCounter:S.meta.counter)||0)+1;
+ modal(`<h3>Default ${dc?'D.C.':'invoice'} number</h3><p class="note" style="margin-top:0">Every new ${dc?'challan':'invoice'} will start from this number and count up by 1. You can still type any number on an individual document.</p>
+ <div class="form"><div><label>Prefix (e.g. 25-26/)</label><input id="n_pre" value="${esc(dc?c.dcPrefix:c.prefix)}" oninput="A.numPrev('${kind}')"></div>
+ ${dc?'':`<div><label>Number of digits (1 = no zero padding)</label><select id="n_pad" onchange="A.numPrev('inv')">${[1,2,3,4,5,6].map(x=>`<option ${x==c.pad?'selected':''}>${x}</option>`).join('')}</select></div>`}
+ <div><label>Next number</label><input id="n_next" type="number" min="1" value="${next}" oninput="A.numPrev('${kind}')"></div></div>
+ <p>Next ${dc?'D.C.':'bill'} will be: <b id="n_prev"></b></p>
+ <div class="row"><button class="btn pri" onclick="A.numSave('${kind}')">Save default</button><button class="btn" onclick="closeModal()">Cancel</button></div>`);A.numPrev(kind)};
+A.numPrev=kind=>{const pre=$('#n_pre').value,n=Math.max(1,+$('#n_next').value||1),pad=kind==='dc'?1:+$('#n_pad').value;$('#n_prev').textContent=pre+String(n).padStart(pad,'0')};
+A.numSave=kind=>{const dc=kind==='dc',n=Math.max(1,+$('#n_next').value||1);
+ if(dc)S.company.dcPrefix=$('#n_pre').value.trim();else{S.company.prefix=$('#n_pre').value.trim();S.company.pad=+$('#n_pad').value}
+ saveCompany();setCounter(n-1,kind);
+ if(dc&&D&&!D.id){D.no=fmtNo('dc',n);D.noAuto=true}if(!dc&&E&&!E.id){E.no=fmtNo('inv',n);E.noAuto=true}
+ closeModal();toast('Default number saved');render()};
+A.newDc=()=>{D=dcBlank();go('newdc')};
+const DI=(label,key,ph)=>`<div><label>${label}</label><input value="${esc(D[key])}" placeholder="${ph||''}" oninput="D.${key}=this.value"></div>`;
+/* keep only designs with a number or meterage; compact filled rows; optionally add one blank entry row */
+const normCols=(cols,edit)=>{let r=(cols||[]).map(c=>({design:(c.design||'').trim(),vals:(c.vals||[]).filter(v=>parseFloat(v)>0).map(v=>(+v).toFixed(2))})).filter(c=>c.design||c.vals.length);
+ if(edit){r.forEach(c=>c.vals.push(''));if(!r.length)r=[{design:'',vals:['']}]}return r};
+const dcRow=(ci,r,v)=>`<tr><td>${r+1}</td><td><input class="mt" data-c="${ci}" data-r="${r}" type="number" inputmode="decimal" step="any" min="0" value="${v}" oninput="A.dcSet(${ci},${r},this)" onblur="A.dcFmt(this)" onkeydown="A.dcKey(event,this)"></td></tr>`;
+const dcBlock=ci=>`<div class="dcb2"><div class="dch"><div><label>Design No.</label><input value="${esc(D.cols[ci].design)}" placeholder="#1246/1" oninput="D.cols[${ci}].design=this.value"></div>${D.cols.length>1?`<button class="rmc" title="Remove this design" onclick="A.dcDel(${ci})">✕</button>`:''}</div><table class="t"><thead><tr><th>S.NO</th><th class="r">MTS.</th></tr></thead><tbody id="dcb${ci}">${D.cols[ci].vals.map((v,r)=>dcRow(ci,r,v)).join('')}</tbody><tfoot><tr><td>Total</td><td class="r" id="dct${ci}">0.00</td></tr></tfoot></table></div>`;
+function dcGrid(){$('#dcgrid').innerHTML=D.cols.map((_,i)=>dcBlock(i)).join('');const ab=$('#dcadd');if(ab)ab.style.display=D.cols.length>=4?'none':'';updDcTotals()}
+V.newdc=()=>{
+ if(!D)D=dcBlank();
+ if(!D.cols||!D.cols.length)D.cols=[{design:'',vals:['']}];
+ const act=S.services.filter(s=>s.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+ return `${createTabs('dc')}<div class="head"><h2>${D.id?'Edit Delivery Challan '+esc(D.no):'New Delivery Challan'}</h2></div>
+ <div class="card"><div class="form">
+  <div><label>D.C. No. ${D.id?'':'<small>(auto – editable)</small>'} <a style="cursor:pointer;color:var(--pri);font-weight:600" onclick="A.numModal('dc')">⚙ Change default</a></label><input value="${esc(D.no)}" oninput="D.no=this.value;D.noAuto=!this.value.trim()"></div>
+  <div><label>Date</label><input type="date" value="${D.date}" onchange="D.date=this.value"></div>
+  <div class="span2"><label>To M/s</label><div class="row"><select id="d_cust" onchange="A.pickDcCust(this.value)">${custOptions(D.customerId)}</select><button class="btn" onclick="A.custModal('','dc')">+ New</button></div></div>
+  <div class="span2"><label>Address</label><textarea id="d_addr" rows="2" oninput="D.address=this.value">${esc(D.address)}</textarea></div>
+  <div><label>Party GSTIN</label><input id="d_gstin" value="${esc(D.gstin)}" oninput="D.gstin=this.value.toUpperCase()" style="text-transform:uppercase"></div>
+  <div><label>HSN Code</label><input value="${esc(D.hsn)}" oninput="D.hsn=this.value"></div>
+  <div class="span2"><label>Process</label><div class="row"><select onchange="A.dcSvc(this)"><option value="">+ Add from services…</option>${act.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><input id="d_proc" style="flex:2" value="${esc(D.process)}" oninput="D.process=this.value" placeholder="e.g. Thath desizing + zero zero"></div></div>
+  ${DI('Party D.C. No.','partyDc')}
+ </div></div>
+ <div class="card"><h3>Fabric specs</h3><div class="form" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">${DI('Width','width','58"')}${DI('Folding','folding','100 cm')}${DI('Shrinkage','shrinkage')}${DI('gms/mtr.','gsm')}${DI('Remarks / reference (optional)','remarks')}</div>
+  <div class="stats" style="grid-template-columns:1fr 1fr;margin:0"><div class="stat"><span>Total Pcs.</span><b id="dc_pcs">0</b></div><div class="stat"><span>Total Mts.</span><b id="dc_mts">0.00</b></div></div></div>
+ <div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0">Meterage <small>— type a value and press Enter to jump to the next row</small></h3><button id="dcadd" class="btn" onclick="A.dcAdd()" style="${D.cols.length>=4?'display:none':''}">+ Add Design No.</button></div><div class="dcgrid" id="dcgrid">${D.cols.map((_,i)=>dcBlock(i)).join('')}</div></div>
+ <div class="card"><h3>Footer</h3><div class="form">${DI('Goods received by','goodsBy')}${DI('Our Lot No.','lotNo')}${DI('Prepared by','preparedBy')}</div></div>
+ <div class="actions"><button class="btn pri" onclick="A.saveDc('queue')">💾 Save to Queue</button><button class="btn" onclick="A.saveDc('new')">Save &amp; New</button><button class="btn" onclick="A.saveDc('print')">🖨 Save &amp; Print</button><button class="btn" onclick="D=null;go('queue')">Cancel</button></div>`;
+};
+AFTER.newdc=()=>{$('#d_cust').value=D.customerId;updDcTotals()};
+function updDcTotals(){const t=dcTot(D);D.cols.forEach((_,i)=>{const e=$('#dct'+i);if(e)e.textContent=(t.cols[i]||0).toFixed(2)});$('#dc_pcs').textContent=t.pcs;$('#dc_mts').textContent=t.mts.toFixed(2)}
+A.dcSet=(ci,r,el)=>{const col=D.cols[ci];col.vals[r]=el.value;
+ /* typing in the last row opens exactly one new row below it */
+ if(el.value!==''&&r===col.vals.length-1){col.vals.push('');$('#dcb'+ci).insertAdjacentHTML('beforeend',dcRow(ci,r+1,''))}
+ updDcTotals()};
+A.dcFmt=el=>{if(el.value==='')return;const n=parseFloat(el.value);if(!isFinite(n))return;el.value=n.toFixed(2);D.cols[+el.dataset.c].vals[+el.dataset.r]=el.value;updDcTotals()};
+A.dcKey=(e,el)=>{if(e.key!=='Enter')return;e.preventDefault();const n=$('.mt[data-c="'+el.dataset.c+'"][data-r="'+(+el.dataset.r+1)+'"]');if(n){n.focus();n.select()}else el.blur()};
+A.dcAdd=()=>{if(D.cols.length>=4)return;D.cols.push({design:'',vals:['']});dcGrid();const i=document.querySelectorAll('.dcb2 .dch input');if(i.length)i[i.length-1].focus()};
+A.dcDel=ci=>{const c=D.cols[ci];if((c.design||c.vals.some(v=>v!==''))&&!confirm('Remove this design and its meterage?'))return;D.cols.splice(ci,1);if(!D.cols.length)D.cols=[{design:'',vals:['']}];dcGrid()};
+A.pickDcCust=id=>{D.customerId=id;const s=$('#d_cust');if(s)s.value=id;const c=S.customers.find(x=>x.id===id);if(c){D.address=c.address||'';D.gstin=c.gstin||'';$('#d_addr').value=D.address;$('#d_gstin').value=D.gstin}};
+A.dcSvc=sel=>{const s=S.services.find(x=>x.id===sel.value);sel.value='';if(!s)return;D.process=D.process?D.process+' + '+s.name:s.name;$('#d_proc').value=D.process};
+A.saveDc=async mode=>{
+ const cu=S.customers.find(c=>c.id===D.customerId);if(!cu)return toast('Please select the customer (To M/s)');
+ if(!dcTot(D).pcs)return toast('Enter at least one meter value');
+ D.type='dc';D.cust={name:cu.name,address:D.address||cu.address||'',phone:cu.phone||'',gstin:D.gstin||''};
+ D.cols=normCols(D.cols);
+ if(!(await assignNo(D,'dc','challans')))return;
+ D.updated=Date.now();const d=put('challans',D);D=null;
+ if(mode==='print'){printInvs([d]);go('history')}else if(mode==='new'){toast('Saved D.C. '+d.no+' to queue');A.newDc()}else{toast('Saved D.C. '+d.no);go('queue')}
+};
+
+/* ---------------- invoice tables (queue + history) ---------------- */
+const tabsHTML=(cur,fn)=>`<div class="tabs">${[['all','All'],['inv','Invoices'],['dc','Delivery Challans']].map(([k,l])=>`<a class="tab ${cur===k?'on':''}" onclick="${fn}('${k}')">${l}</a>`).join('')}</div>`;
+const tabOk=(d,t)=>t==='all'||(t==='inv'?d.type!=='dc':d.type==='dc');
+A.qTab=k=>{QT=k;SEL.q.clear();render()};
+A.hTab=k=>{HT=k;SEL.h.clear();render()};
+function docRow(d,k,hist){
+ const dc=d.type==='dc',st=dc?dcTot(d):null,id=d.id;
+ const badge=dc?'<span class="pill dcb">DC</span>':'<span class="pill invb">Invoice</span>';
+ const sub=dc?[d.process,st.pcs+' pcs'].filter(Boolean).join(' · '):d.lines.map(l=>l.name).join(', ');
+ const tot=dc?num(st.mts)+' m':money(calc(d).total);
+ const q=d.printed?'':'<span class="pill q">queued</span>';
+ return `<tr><td><input type="checkbox" ${SEL[k].has(id)?'checked':''} onchange="A.sel('${k}','${id}',this.checked)"></td><td>${badge}</td><td><b>${esc(d.no)}</b></td><td>${dmy(d.date)}</td><td>${esc(d.cust.name)}<br><small>${esc(sub.slice(0,60))}</small></td><td class="r">${tot}</td>
+ ${hist?(dc?`<td class="r">—</td><td>${q}</td>`:`<td class="r">${money(paidOf(d))}</td><td><span class="pill ${statusOf(d)}">${statusOf(d)}</span> ${q}</td>`):''}
+ <td><div class="acts"><button class="btn sm" title="View" onclick="A.view('${id}')">👁</button><button class="btn sm" title="Print" onclick="printInvs([getDoc('${id}')])">🖨</button><button class="btn sm" title="Edit" onclick="A.edit('${id}')">✏️</button>${hist&&!dc?`<button class="btn sm" title="Payments" onclick="A.payModal('${id}')">💰</button>`:''}${hist&&d.printed?`<button class="btn sm" title="Move back to queue" onclick="A.unprint('${id}')">↩</button>`:''}<button class="btn sm bad" title="Delete" onclick="A.delInv('${id}')">🗑</button></div></td></tr>`;
+}
+const qList=()=>allDocs().filter(d=>!d.printed).sort(bySeqAsc);
+A.sel=(k,id,on)=>{on?SEL[k].add(id):SEL[k].delete(id);const e=$('#cnt_'+k);if(e)e.textContent=SEL[k].size};
+A.selAll=(k,on)=>{const ids=k==='q'?qList().filter(d=>tabOk(d,QT)).map(i=>i.id):filtered().map(i=>i.id);SEL[k].clear();if(on)ids.forEach(x=>SEL[k].add(x));render()};
+A.printSel=k=>{const l=allDocs().filter(i=>SEL[k].has(i.id)).sort(bySeqAsc);if(!l.length)return toast('Select documents first');printInvs(l)};
+A.delSel=k=>{const n=SEL[k].size;if(!n)return toast('Select documents first');if(!confirm('Delete '+n+' document(s)? This cannot be undone.'))return;[...SEL[k]].forEach(id=>{const d=getDoc(id);if(d)del(colOf(d),id)});SEL[k].clear();render()};
+A.delInv=id=>{const d=getDoc(id);if(d&&confirm('Delete '+(d.type==='dc'?'D.C. ':'invoice ')+d.no+'? This cannot be undone.')){del(colOf(d),id);SEL.q.delete(id);SEL.h.delete(id);closeModal();render()}};
+A.unprint=id=>{const d=getDoc(id);d.printed=false;put(colOf(d),d);toast('Moved back to queue');render()};
+A.view=id=>{const d=getDoc(id);if(!d)return;
+ modal(`<div class="row" style="margin-bottom:10px"><button class="btn pri" onclick="printInvs([getDoc('${id}')]);closeModal()">🖨 Print</button><button class="btn" onclick="A.edit('${id}')">✏️ Edit</button>${d.type==='dc'?'':`<button class="btn" onclick="A.payModal('${id}')">💰 Payments</button>`}<button class="btn" style="margin-left:auto" onclick="closeModal()">Close</button></div><div style="overflow:auto">${docHTML(d,'')}</div>`,true)};
+
+V.queue=()=>{
+ const all=qList(),list=all.filter(d=>tabOk(d,QT));SEL.q.forEach(id=>{if(!list.some(i=>i.id===id))SEL.q.delete(id)});
+ return `<div class="head"><div><h2>Print Queue</h2><span class="mut">Saved but not yet printed · ${all.filter(d=>d.type!=='dc').length} invoices, ${all.filter(d=>d.type==='dc').length} challans</span></div><div class="row"><button class="btn pri" onclick="A.newInv()">➕ Invoice</button><button class="btn pri" onclick="A.newDc()">➕ Delivery Challan</button></div></div>
+ ${tabsHTML(QT,'A.qTab')}
+ ${list.length?`<div class="card"><div class="row" style="margin-bottom:10px"><label style="margin:0"><input type="checkbox" ${SEL.q.size===list.length?'checked':''} onchange="A.selAll('q',this.checked)"> Select all</label><button class="btn pri" onclick="A.printSel('q')">🖨 Print selected (<span id="cnt_q">${SEL.q.size}</span>)</button><button class="btn bad" onclick="A.delSel('q')">🗑 Delete selected</button></div>
+ <div class="scroll"><table class="t"><thead><tr><th></th><th>Type</th><th>No</th><th>Date</th><th>Customer / Details</th><th class="r">Total</th><th>Actions</th></tr></thead><tbody>${list.map(d=>docRow(d,'q',false)).join('')}</tbody></table></div></div>`
+ :'<div class="card mut">Nothing in the queue here. Documents you save without printing will appear in this list. Printed documents move to History.</div>'}`;
+};
+
+/* ---------------- HISTORY ---------------- */
+function filtered(){return allDocs().filter(i=>{
+ const dc=i.type==='dc';
+ if(!tabOk(i,HT))return false;
+ if(F.from&&i.date<F.from)return false;if(F.to&&i.date>F.to)return false;if(F.cust&&i.customerId!==F.cust)return false;
+ if(F.no){const q=F.no.toLowerCase();if(!(String(i.no).toLowerCase().includes(q)||String(i.cust.name||'').toLowerCase().includes(q)))return false}
+ if(F.svc){const sv=S.services.find(s=>s.id===F.svc);if(dc){if(!sv||!String(i.process||'').toLowerCase().includes(sv.name.toLowerCase()))return false}else if(!i.lines.some(l=>l.serviceId===F.svc))return false}
+ if(F.status&&(dc||statusOf(i)!==F.status))return false;return true}).sort(bySeqDesc)}
+V.history=()=>`<div class="head"><h2>History</h2><button class="btn" onclick="A.csv()">⬇ Export invoices CSV</button></div>
+ ${tabsHTML(HT,'A.hTab')}
+ <div class="card"><div class="form" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0">
+ <div><label>From</label><input type="date" value="${F.from}" onchange="F.from=this.value;histT()"></div><div><label>To</label><input type="date" value="${F.to}" onchange="F.to=this.value;histT()"></div>
+ <div><label>Customer</label><select onchange="F.cust=this.value;histT()">${custOptions(F.cust).replace('Select customer','All customers')}</select></div>
+ <div><label>Invoice / DC no. or customer</label><input value="${esc(F.no)}" oninput="F.no=this.value;histT()" placeholder="search"></div>
+ <div><label>Service</label><select onchange="F.svc=this.value;histT()"><option value="">All services</option>${[...S.services].sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${s.id}" ${F.svc===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+ <div><label>Payment</label><select onchange="F.status=this.value;histT()">${['','Paid','Unpaid','Partial'].map(x=>`<option value="${x}" ${F.status===x?'selected':''}>${x||'All statuses'}</option>`).join('')}</select></div>
+ <div style="align-self:end"><button class="btn" onclick="Object.assign(F,{from:'',to:'',cust:'',no:'',svc:'',status:''});render()">Clear</button></div></div></div>
+ <div class="card" id="hist"></div>`;
+AFTER.history=()=>histT();
+function histT(){
+ const list=filtered();let tt=0,pp=0,ni=0;list.forEach(i=>{if(i.type!=='dc'){ni++;tt+=calc(i).total;pp+=paidOf(i)}});
+ $('#hist').innerHTML=list.length?`<div class="row" style="margin-bottom:10px"><label style="margin:0"><input type="checkbox" onchange="A.selAll('h',this.checked)"> Select all</label><button class="btn pri" onclick="A.printSel('h')">🖨 Print selected (<span id="cnt_h">${SEL.h.size}</span>)</button><button class="btn bad" onclick="A.delSel('h')">🗑 Delete selected</button></div>
+ <div class="scroll"><table class="t"><thead><tr><th></th><th>Type</th><th>No</th><th>Date</th><th>Customer / Details</th><th class="r">Total</th><th class="r">Paid</th><th>Status</th><th>Actions</th></tr></thead><tbody>${list.map(d=>docRow(d,'h',true)).join('')}</tbody>
+ <tfoot><tr><td></td><td colspan="4">${list.length} documents (${ni} invoices)</td><td class="r">${money(tt)}</td><td class="r">${money(pp)}</td><td colspan="2">Balance ${money(tt-pp)}</td></tr></tfoot></table></div>`:'<p class="mut">No documents match these filters.</p>';
+}
+A.csv=()=>{const h=['Invoice','Date','Customer','GSTIN','Taxable','CGST','SGST','IGST','Total','Paid','Balance','Status'];
+ const rows=filtered().filter(i=>i.type!=='dc').map(i=>{const k=calc(i);return[i.no,i.date,i.cust.name,i.cust.gstin,k.taxable,k.cgst,k.sgst,k.igst,k.total,paidOf(i),balOf(i),statusOf(i)].map(csvCell).join(',')});
+ download('invoices.csv',[h.join(','),...rows].join('\n'),'text/csv')};
+
+A.payModal=id=>{const i=S.invoices.find(x=>x.id===id);if(!i)return;const t=calc(i).total,p=paidOf(i);
+ modal(`<h3>Payments – ${esc(i.no)} · ${esc(i.cust.name)}</h3><div class="tot" style="margin-bottom:12px"><div>Invoice total</div><div>${money(t)}</div><div>Received</div><div>${money(p)}</div><div class="big">Balance</div><div class="big ${t-p>0.005?'badc':'good'}">${money(Math.max(0,t-p))}</div></div>
+ ${(i.payments||[]).length?`<table class="t" style="margin-bottom:12px"><tbody>${i.payments.map((x,n)=>`<tr><td>${dmy(x.date)}</td><td>${esc(x.mode)}${x.note?' · '+esc(x.note):''}</td><td class="r">${money(x.amount)}</td><td><button class="btn sm bad" onclick="A.delPay('${id}',${n})">✕</button></td></tr>`).join('')}</tbody></table>`:''}
+ <div class="form"><div><label>Amount ₹</label><input id="p_amt" type="number" step="any" inputmode="decimal" value="${Math.max(0,r2(t-p))||''}"></div><div><label>Date</label><input id="p_date" type="date" value="${today()}"></div>
+ <div><label>Mode</label><select id="p_mode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select></div><div><label>Note</label><input id="p_note" placeholder="ref / cheque no."></div></div>
+ <div class="row"><button class="btn pri" onclick="A.addPay('${id}')">Add payment</button><button class="btn" onclick="closeModal();render()">Close</button></div>`)};
+A.addPay=id=>{const i=S.invoices.find(x=>x.id===id),a=+$('#p_amt').value;if(!(a>0))return toast('Enter an amount');
+ (i.payments=i.payments||[]).push({amount:a,date:$('#p_date').value,mode:$('#p_mode').value,note:$('#p_note').value.trim()});put('invoices',i);A.payModal(id)};
+A.delPay=(id,n)=>{const i=S.invoices.find(x=>x.id===id);i.payments.splice(n,1);put('invoices',i);A.payModal(id)};
+
+/* ---------------- CUSTOMERS ---------------- */
+let CQ='';
+V.customers=()=>`<div class="head"><h2>Customers</h2><button class="btn pri" onclick="A.custModal('')">+ Add customer</button></div><div class="card"><input placeholder="Search customers…" value="${esc(CQ)}" oninput="CQ=this.value;custT()" style="margin-bottom:10px"><div id="ctab"></div></div>`;
+AFTER.customers=()=>custT();
+function custT(){
+ const l=S.customers.filter(c=>(c.name+c.phone+c.gstin).toLowerCase().includes(CQ.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name));
+ const out={};S.invoices.forEach(i=>{out[i.customerId]=(out[i.customerId]||0)+balOf(i)});
+ $('#ctab').innerHTML=l.length?`<div class="scroll"><table class="t"><thead><tr><th>Name</th><th>Phone</th><th>GSTIN</th><th>State</th><th class="r">Outstanding</th><th></th></tr></thead><tbody>${l.map(c=>`<tr><td><b>${esc(c.name)}</b><br><small>${esc((c.address||'').split('\n')[0])}</small></td><td>${esc(c.phone)}</td><td>${esc(c.gstin)}</td><td>${esc(stateName(stateOf(c)))}</td><td class="r ${out[c.id]>0?'badc':''}">${money(out[c.id]||0)}</td><td><div class="acts"><button class="btn sm" onclick="A.custModal('${c.id}')">✏️</button><button class="btn sm bad" onclick="A.custDel('${c.id}')">🗑</button></div></td></tr>`).join('')}</tbody></table></div>`:'<p class="mut">No customers yet.</p>';
+}
+A.custModal=(id,fromEd)=>{const c=S.customers.find(x=>x.id===id)||{};afterCust=fromEd||false;
+ modal(`<h3>${id?'Edit':'New'} customer</h3><div class="form"><div class="span2"><label>Customer / Company name *</label><input id="c_name" value="${esc(c.name)}"></div>
+ <div class="span2"><label>Address</label><textarea id="c_addr" rows="3">${esc(c.address)}</textarea></div>
+ <div><label>Mobile</label><input id="c_phone" type="tel" value="${esc(c.phone)}"></div><div><label>Email</label><input id="c_email" type="email" value="${esc(c.email)}"></div>
+ <div><label>GSTIN</label><input id="c_gstin" value="${esc(c.gstin)}" maxlength="15" oninput="A.gstState(this.value)" style="text-transform:uppercase"></div>
+ <div><label>State (decides CGST/SGST vs IGST)</label><select id="c_state">${STATES.map(s=>`<option value="${s[0]}" ${s[0]===(c.stateCode||S.company.stateCode)?'selected':''}>${s[0]} – ${s[1]}</option>`).join('')}</select></div></div>
+ <div class="row"><button class="btn pri" onclick="A.custSave('${id||''}')">Save</button><button class="btn" onclick="closeModal()">Cancel</button></div>`)};
+A.gstState=v=>{if(/^\d{2}/.test(v)&&STATES.some(s=>s[0]===v.slice(0,2)))$('#c_state').value=v.slice(0,2)};
+A.custSave=id=>{const name=$('#c_name').value.trim(),g=$('#c_gstin').value.trim().toUpperCase();
+ if(!name)return toast('Enter customer name');if(g&&!GSTRE.test(g))return toast('GSTIN format looks invalid');
+ const o=put('customers',{...(S.customers.find(x=>x.id===id)||{}),id:id||undefined,name,address:$('#c_addr').value.trim(),phone:$('#c_phone').value.trim(),email:$('#c_email').value.trim(),gstin:g,stateCode:g?g.slice(0,2):$('#c_state').value});
+ closeModal();if(afterCust==='dc'&&D){$('#d_cust').innerHTML=custOptions(o.id);A.pickDcCust(o.id)}else if(afterCust&&E){$('#e_cust').innerHTML=custOptions(o.id);A.pickCust(o.id)}else render()};
+A.custDel=id=>{if(confirm('Delete this customer? Existing invoices keep their saved details.')){del('customers',id);render()}};
+
+/* ---------------- SERVICES ---------------- */
+V.services=()=>`<div class="head"><div><h2>Services &amp; Rates</h2><span class="mut">Rates and GST here auto-fill on every new invoice. Past invoices are not changed.</span></div><button class="btn pri" onclick="A.svcModal('')">+ Add service</button></div>
+ <div class="card"><div class="scroll"><table class="t"><thead><tr><th>Service</th><th>HSN/SAC</th><th>Unit</th><th class="r">Rate ₹</th><th class="r">GST %</th><th>Active</th><th></th></tr></thead><tbody>
+ ${[...S.services].sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.hsn)}</td><td>${esc(s.unit)}</td><td class="r"><input type="number" step="any" value="${s.rate}" style="width:90px;text-align:right" onchange="A.quickRate('${s.id}',this.value)"></td><td class="r">${s.gst}%</td><td><input type="checkbox" ${s.active!==false?'checked':''} onchange="A.svcActive('${s.id}',this.checked)"></td><td><div class="acts"><button class="btn sm" onclick="A.svcModal('${s.id}')">✏️</button><button class="btn sm bad" onclick="A.svcDel('${s.id}')">🗑</button></div></td></tr>`).join('')}</tbody></table></div></div>`;
+A.quickRate=(id,v)=>{const s=S.services.find(x=>x.id===id);s.rate=+v||0;put('services',s);toast('Rate updated')};
+A.svcActive=(id,on)=>{const s=S.services.find(x=>x.id===id);s.active=on;put('services',s)};
+A.svcModal=id=>{const s=S.services.find(x=>x.id===id)||{unit:'Kg',gst:S.company.defaultGst,hsn:'998821',active:true};
+ modal(`<h3>${id?'Edit':'New'} service</h3><div class="form"><div class="span2"><label>Service name *</label><input id="s_n" value="${esc(s.name)}"></div>
+ <div><label>Unit</label><input id="s_u" list="unitList" value="${esc(s.unit)}"></div><div><label>Rate ₹ per unit</label><input id="s_r" type="number" step="any" value="${s.rate??''}"></div>
+ <div><label>GST %</label><input id="s_g" list="gstList" type="number" step="any" value="${s.gst}"></div><div><label>HSN / SAC</label><input id="s_h" value="${esc(s.hsn)}"></div></div>
+ <div class="row"><button class="btn pri" onclick="A.svcSave('${id||''}')">Save</button><button class="btn" onclick="closeModal()">Cancel</button></div>`)};
+A.svcSave=id=>{const name=$('#s_n').value.trim();if(!name)return toast('Enter service name');
+ put('services',{...(S.services.find(x=>x.id===id)||{active:true}),id:id||undefined,name,unit:$('#s_u').value.trim()||'Kg',rate:+$('#s_r').value||0,gst:+$('#s_g').value||0,hsn:$('#s_h').value.trim()});closeModal();render()};
+A.svcDel=id=>{if(confirm('Delete this service? (Tip: untick Active to just hide it.) Old invoices are not affected.')){del('services',id);render()}};
+
+/* ---------------- REPORTS ---------------- */
+V.reports=()=>{
+ const list=S.invoices.filter(i=>i.date>=REP.from&&i.date<=REP.to);
+ let rev=0,tax=0,gst=0,exp=0,pend=0;const sv={},cs={},ex={};
+ list.forEach(i=>{const k=calc(i),b=balOf(i);rev+=k.total;tax+=k.taxable;gst+=k.totalTax;exp+=k.exp;pend+=b;
+  i.lines.forEach(l=>{const o=sv[l.name]||(sv[l.name]={n:0,qty:0,unit:l.unit,amt:0});o.n++;o.qty+=+l.qty;o.amt+=r2(l.qty*l.rate)});
+  const key=i.customerId||i.cust.name,o=cs[key]||(cs[key]={name:i.cust.name,n:0,total:0,paid:0,profit:0});o.n++;o.total+=k.total;o.paid+=paidOf(i);o.profit+=k.profit;
+  (i.expenses||[]).forEach(x=>{ex[x.desc]=(ex[x.desc]||0)+(+x.amount||0)})});
+ const profit=tax-exp;
+ return `<div class="head"><h2>Reports</h2><div class="row"><input type="date" value="${REP.from}" style="width:150px" onchange="REP.from=this.value;render()"><span>to</span><input type="date" value="${REP.to}" style="width:150px" onchange="REP.to=this.value;render()">
+ <button class="btn" onclick="REP.from=monthStart();REP.to=today();render()">This month</button><button class="btn" onclick="REP.from=today().slice(0,4)+'-01-01';REP.to=today();render()">This year</button></div></div>
+ <div class="stats"><div class="stat"><span>Invoices</span><b>${list.length}</b></div><div class="stat"><span>Taxable revenue</span><b>${money(tax)}</b></div><div class="stat"><span>GST collected</span><b>${money(gst)}</b></div><div class="stat"><span>Invoice total</span><b>${money(rev)}</b></div>
+ <div class="stat"><span>Purchase cost / expenses</span><b>${money(exp)}</b></div><div class="stat"><span>Profit</span><b class="${profit>=0?'good':'badc'}">${money(profit)}</b></div><div class="stat"><span>Pending</span><b class="badc">${money(pend)}</b></div></div>
+ <div class="card"><h3>Service-wise</h3><div class="scroll"><table class="t"><thead><tr><th>Service</th><th class="r">Invoices</th><th class="r">Quantity</th><th class="r">Revenue (taxable)</th></tr></thead><tbody>${Object.entries(sv).sort((a,b)=>b[1].amt-a[1].amt).map(([n,o])=>`<tr><td>${esc(n)}</td><td class="r">${o.n}</td><td class="r">${num(o.qty)} ${esc(o.unit)}</td><td class="r">${money(o.amt)}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">No data</td></tr>'}</tbody></table></div></div>
+ <div class="card"><h3>Customer-wise</h3><div class="scroll"><table class="t"><thead><tr><th>Customer</th><th class="r">Invoices</th><th class="r">Billed</th><th class="r">Received</th><th class="r">Pending</th><th class="r">Profit</th></tr></thead><tbody>${Object.values(cs).sort((a,b)=>b.total-a.total).map(o=>`<tr><td>${esc(o.name)}</td><td class="r">${o.n}</td><td class="r">${money(o.total)}</td><td class="r">${money(o.paid)}</td><td class="r ${o.total-o.paid>0.5?'badc':''}">${money(Math.max(0,o.total-o.paid))}</td><td class="r">${money(o.profit)}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">No data</td></tr>'}</tbody></table></div></div>
+ <div class="card"><h3>Purchase cost breakdown</h3><table class="t"><tbody>${Object.entries(ex).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<tr><td>${esc(n)}</td><td class="r">${money(v)}</td></tr>`).join('')||'<tr><td class="mut">No expenses recorded</td></tr>'}</tbody></table></div>`;
+};
+
+/* ---------------- SETTINGS ---------------- */
+const T=(id,l,v,ph)=>`<div><label>${l}</label><input id="s_${id}" value="${esc(v)}" placeholder="${ph||''}"></div>`;
+const TA=(id,l,v,r)=>`<div class="span2"><label>${l}</label><textarea id="s_${id}" rows="${r||3}">${esc(v)}</textarea></div>`;
+const SL=(id,l,v,o)=>`<div><label>${l}</label><select id="s_${id}">${o.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return `<option value="${esc(a)}" ${String(a)===String(v)?'selected':''}>${esc(b)}</option>`}).join('')}</select></div>`;
+const CK=(id,l,v)=>`<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--tx)"><input type="checkbox" id="s_${id}" ${v?'checked':''}> ${l}</label>`;
+V.settings=()=>{const c=S.company;
+ return `<div class="head"><h2>Settings</h2><button class="btn pri" onclick="A.saveSettings()">💾 Save settings</button></div>
+ <div class="card"><h3>Company details (printed on every invoice)</h3><div class="form">${T('name','Company name',c.name)}${T('tagline','Tagline / description',c.tagline)}${TA('address','Address',c.address)}${T('phone','Phone',c.phone)}${T('email','Email',c.email)}${T('web','Website',c.web)}${T('gstin','GSTIN',c.gstin)}${T('pan','PAN',c.pan)}
+ ${SL('stateCode','Your state',c.stateCode,STATES.map(s=>[s[0],s[0]+' – '+s[1]]))}
+ <div class="span2"><label>Logo</label><div class="row">${c.logo?`<img src="${c.logo}" style="max-height:60px;max-width:150px;border:1px solid var(--bd);padding:4px;border-radius:6px">`:'<span class="mut">No logo</span>'}<input type="file" accept="image/*" onchange="A.logo(this)" style="max-width:260px">${c.logo?'<button class="btn sm bad" onclick="A.rmLogo()">Remove</button>':''}</div></div></div></div>
+ <div class="card"><h3>Invoice layout</h3><div class="form">${T('invTitle','Invoice heading',c.invTitle)}${T('prefix','Invoice number prefix',c.prefix,'INV-')}
+ ${SL('pad','Number digits',c.pad,[1,2,3,4,5,6])}<div><label>Next invoice number</label><input id="s_next" type="number" min="1" value="${(S.meta.counter||0)+1}"></div>
+ ${SL('paper','Paper size',c.paper,['A4','A5','Letter'])}${SL('copies','Copies per invoice',c.copies,[['1','Single copy'],['2','Original + Duplicate'],['3','Original + Duplicate + Triplicate']])}
+ ${SL('fontSize','Font size',c.fontSize,[10,11,12,13,14])}
+ ${T('bankBranch','Bank & Branch (printed as Branch)',c.bankBranch)}${T('bankAcc','Account No.',c.bankAcc)}${T('bankIfsc','IFSC Code',c.bankIfsc)}<div></div>${TA('terms','Terms & conditions',c.terms,4)}${T('footer','Footer line',c.footer)}${T('sigLabel','Signature label',c.sigLabel)}
+ <div class="span2 row">${CK('showLogo','Show logo',c.showLogo)}${CK('showBank','Show bank details',c.showBank)}${CK('showTerms','Show terms',c.showTerms)}${CK('roundOff','Round off total to nearest rupee',c.roundOff)}</div></div>
+ <button class="btn" onclick="A.saveSettings(true)">👁 Save &amp; preview invoice</button></div>
+ <div class="card"><h3>Delivery Challan header &amp; footer</h3><div class="form">${T('dcName','Company name',c.dcName)}${T('dcSub','Sub-heading (shown as “Name & Sub-heading”)',c.dcSub)}${T('dcGstin','GSTIN',c.dcGstin)}${T('dcCell','Cell',c.dcCell)}${T('dcOffice','Office',c.dcOffice)}${T('dcBOffice','B. Office',c.dcBOffice)}${T('dcPrefix','D.C. number prefix',c.dcPrefix)}<div><label>Next D.C. number</label><input id="s_dcnext" type="number" min="1" value="${(S.meta.dcCounter||0)+1}"></div>${T('dcHsn','Default HSN code',c.dcHsn)}<div></div>${T('dcNote1','Disclaimer line 1',c.dcNote1)}${T('dcNote2','Disclaimer line 2',c.dcNote2)}</div></div>
+ <div class="card"><h3>GST &amp; expense options</h3><div class="form">${T('defaultGst','Default GST % for new services',c.defaultGst)}${T('gstRates','GST % suggestions (comma separated)',c.gstRates)}${T('expensePresets','Expense quick-buttons (comma separated)',c.expensePresets)}</div>
+ <p class="note">GST % is also editable per service and per invoice line. CGST/SGST vs IGST is chosen automatically from the customer's state, and can be overridden on each invoice.</p></div>
+ <div class="card"><h3>Cloud sync (multiple devices)</h3><p class="note" style="margin-top:0">${fs?`Connected as <b>${esc(USER)}</b>. Changes sync live across all devices signed in.`:'Currently saving only in this browser. Follow README.md to create a free Firebase project, then paste its config below.'}</p>
+ ${typeof FIREBASE_CONFIG==='object'&&FIREBASE_CONFIG?'<p class="note">Config is built into index.html.</p>':`<textarea id="fbcfg" rows="4" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'>${esc(localStorage.getItem('tb_fb')||'')}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" onclick="A.saveFb()">Save &amp; connect</button>${localStorage.getItem('tb_fb')?'<button class="btn" onclick="A.rmFb()">Disconnect</button>':''}</div>`}
+ ${fs?'<div style="margin-top:10px"><button class="btn" onclick="auth.signOut().then(()=>location.reload())">Sign out</button></div>':''}</div>
+ <div class="card"><h3>Backup</h3><div class="row"><button class="btn" onclick="A.backup()">⬇ Download backup (JSON)</button><label class="btn" style="margin:0">⬆ Restore from backup<input type="file" accept=".json" hidden onchange="A.restore(this)"></label></div>
+ <p class="note">Tip: take a backup now and then. If you move from local mode to cloud sync, restore your backup after connecting to upload existing data.</p></div>`;
+};
+A.saveSettings=prev=>{
+ const c={...S.company};
+ ['name','tagline','address','phone','email','web','pan','bankBranch','bankAcc','bankIfsc','terms','footer','sigLabel','invTitle','prefix','gstRates','expensePresets','stateCode','paper','copies','dcName','dcSub','dcGstin','dcCell','dcOffice','dcBOffice','dcPrefix','dcHsn','dcNote1','dcNote2'].forEach(k=>c[k]=$('#s_'+k).value);
+ ['pad','fontSize','defaultGst'].forEach(k=>c[k]=+$('#s_'+k).value||0);
+ ['showLogo','showBank','showTerms','roundOff'].forEach(k=>c[k]=$('#s_'+k).checked);
+ const g=$('#s_gstin').value.trim().toUpperCase();if(g&&!GSTRE.test(g))return toast('Your GSTIN format looks invalid');
+ c.gstin=g;if(g)c.stateCode=g.slice(0,2);
+ S.company=c;saveCompany();
+ const dn=+$('#s_dcnext').value;if(dn>=1&&dn!==(S.meta.dcCounter||0)+1)setCounter(dn-1,'dc');
+ const nx=+$('#s_next').value;if(nx>=1&&nx!==(S.meta.counter||0)+1)setCounter(nx-1);
+ toast('Settings saved');render();
+ if(prev===true)A.view_sample();
+};
+A.view_sample=()=>{const inv={no:(S.company.prefix||'')+String(1).padStart(+S.company.pad||1,'0'),date:today(),ref:'LOT-101',cust:{name:'Sample Customer',address:'12, Market Road\nTiruppur',phone:'9876543210',gstin:'33ABCDE1234F1Z5',stateCode:'33'},
+ terms:'Credit',lines:S.services.slice(0,3).map((s,n)=>({...s,partyDc:String(81-n),dcNo:'25-26/652'+n,width:'58"',pcs:5,qty:259.7})),expenses:[],payments:[]};
+ modal(`<div class="row" style="margin-bottom:10px"><button class="btn" style="margin-left:auto" onclick="closeModal()">Close</button></div><div style="overflow:auto">${invoiceHTML(inv,'')}</div>`,true)};
+A.logo=inp=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=400,s=Math.min(1,m/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=im.width*s;cv.height=im.height*s;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.company.logo=cv.toDataURL('image/png');saveCompany();toast('Logo updated');render()};im.src=r.result};r.readAsDataURL(f)};
+A.rmLogo=()=>{S.company.logo='';saveCompany();render()};
+A.saveFb=()=>{const t=$('#fbcfg').value.trim();if(!t)return;try{const cfg=Function('return ('+t+')')();if(!cfg.apiKey||!cfg.projectId)throw 0;localStorage.setItem('tb_fb',JSON.stringify(cfg));location.reload()}catch(e){toast('Could not read that config. Paste the firebaseConfig object.')}};
+A.rmFb=()=>{if(confirm('Disconnect cloud sync on this device?')){localStorage.removeItem('tb_fb');location.reload()}};
+A.backup=()=>download('billing-backup-'+today()+'.json',JSON.stringify({company:S.company,customers:S.customers,services:S.services,invoices:S.invoices,challans:S.challans,counter:S.meta.counter,dcCounter:S.meta.dcCounter||0}),'application/json');
+A.restore=inp=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);
+ if(!confirm('Restore '+(d.invoices||[]).length+' invoices, '+(d.customers||[]).length+' customers and '+(d.services||[]).length+' services? Same-ID records will be overwritten.'))return;
+ S.company={...DEF_COMPANY,...d.company};saveCompany();['customers','services','invoices','challans'].forEach(c=>(d[c]||[]).forEach(o=>put(c,o)));
+ if(d.counter>(S.meta.counter||0))setCounter(d.counter);if(d.dcCounter>(S.meta.dcCounter||0))setCounter(d.dcCounter,'dc');toast('Backup restored');render()}catch(e){toast('Invalid backup file')}};r.readAsText(f)};
+
+/* ---------------- app login + master settings ---------------- */
+const CRED_KEY='tb_cred',SESS_KEY='tb_auth',DEF_USER='STMW',DEF_PASS='NKS01';
+async function pwHash(p){try{if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('tb|'+p));return 'sha256:'+[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}}catch(e){}return 'plain:'+p}
+async function saveCred(u,p){localStorage.setItem(CRED_KEY,JSON.stringify({u:u,p:await pwHash(p)}))}
+function getCred(){try{const c=JSON.parse(localStorage.getItem(CRED_KEY)||'null');if(c&&c.u&&c.p)return c}catch(e){}return null}
+async function ensureCred(){if(!getCred())await saveCred(DEF_USER,DEF_PASS)}
+A.gateLogin=async e=>{e.preventDefault();const u=$('#g_user').value.trim(),p=$('#g_pass').value;await ensureCred();const c=getCred();
+ if(u===c.u&&await pwHash(p)===c.p){sessionStorage.setItem(SESS_KEY,'1');$('#gateErr').textContent='';enterApp()}
+ else{$('#gateErr').textContent='Incorrect username or password.';$('#g_pass').value='';$('#g_pass').focus()}
+ return false};
+const RECOVERY_PIN='9999';
+A.recToggle=on=>{$('#recBox').hidden=!on;$('#recLink').hidden=on;$('#recErr').textContent='';$('#g_pin').value='';if(on)$('#g_pin').focus()};
+A.recReset=async()=>{
+ if($('#g_pin').value.trim()!==RECOVERY_PIN){$('#recErr').textContent='Incorrect recovery PIN.';$('#g_pin').value='';$('#g_pin').focus();return}
+ localStorage.removeItem(CRED_KEY);await saveCred(DEF_USER,DEF_PASS);
+ A.recToggle(false);$('#gateErr').textContent='';$('#g_user').value=DEF_USER;$('#g_pass').value='';$('#g_pass').focus();
+ alert('Login has been reset.\n\nUsername: '+DEF_USER+'\nPassword: '+DEF_PASS)};
+A.logout=()=>{sessionStorage.removeItem(SESS_KEY);location.reload()};
+V.master=()=>{const c=getCred()||{u:DEF_USER};
+ return `<div class="head"><h2>Master Settings</h2></div>
+ <div class="card"><h3>Change login username &amp; password</h3>
+  <p class="note" style="margin-top:0">Current username: <b>${esc(c.u)}</b>. Enter a new username and password and save – the old password is not required. The new details are used from the next login.</p>
+  <div class="form" style="max-width:520px">
+   <div><label>New Username</label><input id="m_user" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+   <div><label>New Password</label><input id="m_pass" type="password" autocomplete="new-password"></div>
+  </div>
+  <label class="chk" style="display:flex;gap:6px;align-items:center;font-size:13px;margin-top:8px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" onchange="$('#m_pass').type=this.checked?'text':'password'"> Show password</label>
+  <div class="row" style="margin-top:14px"><button class="btn pri" onclick="A.saveMaster()">💾 Save Changes</button><button class="btn" onclick="A.resetMaster()">↺ Reset to Default</button></div>
+ </div>`};
+A.saveMaster=async()=>{const u=$('#m_user').value.trim(),p=$('#m_pass').value;
+ if(!u||!p)return toast('Enter both a new username and a new password');
+ await saveCred(u,p);toast('Login details updated. Use them next time you sign in.');render()};
+A.resetMaster=async()=>{if(!confirm('Reset login to the default username and password?'))return;
+ await saveCred(DEF_USER,DEF_PASS);toast('Login reset to default');render()};
+function enterApp(){$('#gate').hidden=true;$('#logoutBtn').hidden=false;if(!enterApp.done){enterApp.done=true;bootApp()}}
+
+/* ---------------- boot ---------------- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s)})}
+A.login=()=>{$('#loginErr').textContent='';auth.signInWithEmailAndPassword($('#l_email').value.trim(),$('#l_pass').value).catch(e=>$('#loginErr').textContent=e.message)};
+function listen(){
+ ['customers','services','invoices','challans'].forEach(c=>fs.collection(c).onSnapshot(s=>{S[c]=s.docs.map(d=>({...d.data(),id:d.id}));onData()},e=>toast('Sync error: '+e.message)));
+ fs.doc('meta/company').onSnapshot(d=>{
+  if(d.exists)S.company={...DEF_COMPANY,...d.data()};
+  else if(!d.metadata.fromCache&&!seeded){seeded=true;saveCompany();seedServices()}
+  onData()});
+ fs.doc('meta/counter').onSnapshot(d=>{S.meta.counter=d.exists?d.data().n:0});
+ fs.doc('meta/dcCounter').onSnapshot(d=>{S.meta.dcCounter=d.exists?d.data().n:0});
+}
+async function initCloud(cfg){
+ const base='https://www.gstatic.com/firebasejs/10.12.2/';
+ for(const f of ['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js'])await loadScript(base+f);
+ firebase.initializeApp(cfg);auth=firebase.auth();const db=firebase.firestore();
+ try{await db.enablePersistence({synchronizeTabs:true})}catch(e){}
+ auth.onAuthStateChanged(u=>{
+  if(u){USER=u.email;$('#login').hidden=true;$('#app').hidden=false;if(!fs){fs=db;listen()}render()}
+  else{$('#app').hidden=true;$('#login').hidden=false}
+ });
+}
+function initLocal(){
+ try{const d=JSON.parse(localStorage.getItem('tb_data')||'null');if(d){S.company={...DEF_COMPANY,...d.company};S.customers=d.customers||[];S.services=d.services||[];S.invoices=d.invoices||[];S.challans=d.challans||[];S.meta={counter:0,dcCounter:0,...(d.meta||{})}}else{seedServices()}}catch(e){seedServices()}
+ $('#app').hidden=false;render();
+}
+async function bootApp(){
+ let cfg=FIREBASE_CONFIG;if(!cfg){try{cfg=JSON.parse(localStorage.getItem('tb_fb')||'null')}catch(e){}}
+ if(!cfg)return initLocal();
+ try{await initCloud(cfg)}catch(e){document.body.innerHTML=`<div style="padding:30px;font-family:sans-serif"><h3>Could not connect to cloud database</h3><p>${esc(e.message)}</p><p>Check your internet connection.</p><button onclick="location.reload()">Retry</button> <button onclick="localStorage.removeItem('tb_fb');location.reload()">Use local mode instead</button></div>`}
+}
+(async function gateInit(){
+ await ensureCred();
+ if(sessionStorage.getItem(SESS_KEY)==='1')enterApp();
+ else{$('#gate').hidden=false;$('#g_user').focus()}
+})();
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>
